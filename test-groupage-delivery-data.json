@@ -1,0 +1,53 @@
+{
+  "testData": {
+    "description": "Тестовые данные для проверки расчета стоимости доставки сборного груза",
+    "shipment": {
+      "fromCityCode": 44,
+      "fromCityName": "Москва",
+      "fromAddress": "Москва",
+      "shipmentPoint": "MOS4",
+      "weight": 50000,
+      "length": 50,
+      "width": 50,
+      "height": 50,
+      "description": "Сборный груз 50 кг, размеры 50x50x50 см"
+    },
+    "delivery": {
+      "test1_pvz": {
+        "name": "Доставка до ПВЗ (тариф 751)",
+        "toCityCode": 270,
+        "toCityName": "Новосибирск",
+        "tariffCode": 751,
+        "deliveryPoint": null,
+        "toAddress": null,
+        "expectedBehavior": "Автоматический поиск ПВЗ с is_ltl=true"
+      },
+      "test2_door": {
+        "name": "Доставка до двери (тариф 750)",
+        "toCityCode": 270,
+        "toCityName": "Новосибирск",
+        "tariffCode": 750,
+        "deliveryPoint": null,
+        "toAddress": "г. Новосибирск, ул. Ленина, д. 1, кв. 10",
+        "expectedBehavior": "Расчет с адресом доставки"
+      },
+      "test3_pvz_explicit": {
+        "name": "Доставка до ПВЗ с явным указанием (тариф 751)",
+        "toCityCode": 270,
+        "toCityName": "Новосибирск",
+        "tariffCode": 751,
+        "deliveryPoint": "NSK1",
+        "toAddress": null,
+        "expectedBehavior": "Расчет с явно указанным ПВЗ"
+      }
+    }
+  },
+  "apiEndpoint": "http://localhost:3000/api/delivery/calculate-by-tariff",
+  "notes": [
+    "Тариф 751 - Сборный груз склад-склад (до ПВЗ)",
+    "Тариф 750 - Сборный груз склад-дверь (до двери)",
+    "Вес: 50 кг (50000 грамм)",
+    "Размеры: 50x50x50 см"
+  ]
+}
+

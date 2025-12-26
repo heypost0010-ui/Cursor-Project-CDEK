@@ -61,7 +61,7 @@ app.use((err, req, res, next) => {
 });
 
 // Запуск сервера
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log('🚀 Сервер запущен!');
   console.log(`📍 URL: http://localhost:${PORT}`);
   console.log(`🌍 CDEK API: ${process.env.CDEK_API_URL}`);
@@ -71,6 +71,23 @@ app.listen(PORT, () => {
   console.log(`  POST http://localhost:${PORT}/api/delivery/calculate`);
   console.log(`  POST http://localhost:${PORT}/api/delivery/calculate-by-tariff`);
   console.log(`  GET  http://localhost:${PORT}/api/delivery/offices?cityCode=44`);
+});
+
+// Обработка ошибок при запуске сервера
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`\n❌ Ошибка: Порт ${PORT} уже занят!`);
+    console.error('\nВозможные решения:');
+    console.error(`  1. Остановите процесс, занимающий порт ${PORT}:`);
+    console.error(`     netstat -ano | findstr :${PORT}`);
+    console.error(`     taskkill /PID <PID> /F`);
+    console.error(`  2. Или измените порт в переменной окружения PORT`);
+    console.error(`  3. Или используйте другой порт: PORT=3001 npm start`);
+    process.exit(1);
+  } else {
+    console.error('❌ Ошибка при запуске сервера:', error);
+    process.exit(1);
+  }
 });
 
 

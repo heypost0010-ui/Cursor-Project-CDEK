@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch src/server.js",
+    "start:check": "powershell -ExecutionPolicy Bypass -File start-server.ps1"
   },
   "keywords": [
     "cdek",
