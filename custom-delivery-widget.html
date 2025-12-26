@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Виджет расчета доставки CDEK</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .widget-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .widget-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .widget-header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .widget-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .delivery-type {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .delivery-option {
+            flex: 1;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            background: #f9f9f9;
+        }
+
+        .delivery-option:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+
+        .delivery-option.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .delivery-option.active .icon {
+            color: white;
+        }
+
+        .delivery-option .icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .delivery-option .title {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .delivery-option .description {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .calculate-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 20px;
+        }
+
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .calculate-btn:active {
+            transform: translateY(0);
+        }
+
+        .calculate-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-item {
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .result-item .tariff-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .result-item .tariff-cost {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .result-item .tariff-period {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            color: #1976d2;
+        }
+
+        .info-box strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .city-search {
+            position: relative;
+        }
+
+        .city-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .city-suggestions.show {
+            display: block;
+        }
+
+        .city-suggestion {
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .city-suggestion:hover {
+            background: #f0f0ff;
+        }
+
+        .city-suggestion.selected {
+            background: #667eea;
+            color: white;
+        }
+
+        .city-suggestion.exact-match {
+            background: #e8f5e9;
+            font-weight: 600;
+        }
+
+        .city-suggestion.exact-match:hover {
+            background: #c8e6c9;
+        }
+    </style>
+</head>
+<body>
+    <div class="widget-container">
+        <div class="widget-header">
+            <h1>🚚 Расчет доставки CDEK</h1>
+            <p>Выберите город доставки и способ получения</p>
+        </div>
+
+        <div class="info-box">
+            <strong>Параметры отправления (константы):</strong>
+            От: Москва, ПВЗ MOS4<br>
+            Вес: 50 кг | Размеры: 50×50×50 см<br>
+            <strong>Тарифы:</strong> 751 (до ПВЗ) / 750 (до двери) - Сборный груз<br>
+            <small style="color: #666; margin-top: 5px; display: block;">
+                💡 <strong>Поиск городов:</strong> API CDEK возвращает результаты по частичному совпадению. 
+                Точные совпадения отображаются первыми и выделены зеленым цветом.
+            </small>
+        </div>
+
+        <form id="deliveryForm">
+            <div class="form-group">
+                <label for="cityInput">Город доставки *</label>
+                <div class="city-search">
+                    <input 
+                        type="text" 
+                        id="cityInput" 
+                        placeholder="Начните вводить название города..."
+                        autocomplete="off"
+                        required
+                    >
+                    <div id="citySuggestions" class="city-suggestions"></div>
+                </div>
+                <small style="color: #666; display: block; margin-top: 5px; font-size: 12px;">
+                    💡 Введите название города и <strong>обязательно выберите город из списка кликом</strong>. Точные совпадения выделены зеленым цветом.
+                </small>
+                <input type="hidden" id="cityCode" required>
+            </div>
+
+            <div class="form-group">
+                <label>Способ доставки *</label>
+                <div class="delivery-type">
+                    <div class="delivery-option" data-type="office">
+                        <div class="icon">📦</div>
+                        <div class="title">До ПВЗ</div>
+                        <div class="description">Самовывоз из пункта выдачи</div>
+                    </div>
+                    <div class="delivery-option" data-type="door">
+                        <div class="icon">🚪</div>
+                        <div class="title">До двери</div>
+                        <div class="description">Курьером по адресу</div>
+                    </div>
+                </div>
+                <input type="hidden" id="deliveryType" required>
+            </div>
+
+            <button type="submit" class="calculate-btn" id="calculateBtn">
+                Рассчитать стоимость
+            </button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>Расчет стоимости доставки...</p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="results" id="results">
+            <h3 style="margin-bottom: 15px; color: #333;">Результаты расчета:</h3>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Константы (согласно требованиям)
+        const CONSTANTS = {
+            fromCityCode: 44, // Москва
+            fromAddress: 'Москва',
+            weight: 50000,    // 50 кг в граммах
+            length: 50,      // см
+            width: 50,        // см
+            height: 50        // см
+        };
+
+        // API endpoint (используем наш backend)
+        const API_BASE_URL = 'http://localhost:3000/api/delivery';
+
+        // Элементы DOM
+        const cityInput = document.getElementById('cityInput');
+        const cityCode = document.getElementById('cityCode');
+        const citySuggestions = document.getElementById('citySuggestions');
+        const deliveryOptions = document.querySelectorAll('.delivery-option');
+        const deliveryType = document.getElementById('deliveryType');
+        const form = document.getElementById('deliveryForm');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const results = document.getElementById('results');
+        const resultsContent = document.getElementById('resultsContent');
+
+        let selectedCity = null;
+        let selectedDeliveryType = null;
+
+        // Храним последние результаты поиска для автоматического выбора
+        let lastSearchResults = [];
+
+        // Поиск городов
+        let searchTimeout;
+        cityInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            if (query.length < 2) {
+                citySuggestions.classList.remove('show');
+                cityCode.value = '';
+                selectedCity = null;
+                lastSearchResults = [];
+                return;
+            }
+
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchCities(query);
+            }, 300);
+        });
+
+        async function searchCities(query) {
+            try {
+                // Увеличиваем size до 100, чтобы гарантированно найти Москву и другие популярные города
+                const response = await fetch(`${API_BASE_URL}/cities?q=${encodeURIComponent(query)}&size=100`);
+                
+                if (!response.ok) {
+                    console.error('Ошибка HTTP при поиске городов:', response.status);
+                    citySuggestions.classList.remove('show');
+                    return;
+                }
+                
+                const data = await response.json();
+                console.log('Результат поиска городов:', data);
+                console.log('Всего найдено:', data.data?.length || 0);
+                
+                if (data.success && data.data && data.data.length > 0) {
+                    // Проверяем, есть ли Москва в результатах
+                    const moscow = data.data.find(city => {
+                        const name = (city.city || city.name || '').toLowerCase();
+                        return name === 'москва' || city.code === 44;
+                    });
+                    
+                    if (moscow) {
+                        console.log('✅ Москва найдена в результатах!', moscow);
+                    } else {
+                        console.log('❌ Москва НЕ найдена в результатах');
+                        console.log('Первые 10 результатов:', data.data.slice(0, 10).map(c => `${c.city || c.name} (${c.code})`));
+                    }
+                    
+                    displayCitySuggestions(data.data);
+                } else {
+                    citySuggestions.classList.remove('show');
+                    if (query.length >= 3) {
+                        showError('Город не найден. Попробуйте ввести другое название.');
+                    }
+                }
+            } catch (err) {
+                console.error('Ошибка поиска городов:', err);
+                if (err.message && err.message.includes('Failed to fetch')) {
+                    showError('Не удалось подключиться к серверу. Проверьте, что сервер запущен на http://localhost:3000');
+                } else {
+                    showError('Ошибка при поиске городов. Попробуйте еще раз.');
+                }
+                citySuggestions.classList.remove('show');
+            }
+        }
+
+        function displayCitySuggestions(cities) {
+            citySuggestions.innerHTML = '';
+            
+            // Сохраняем результаты для автоматического выбора
+            lastSearchResults = cities;
+            
+            // Получаем текущий запрос для сортировки
+            const query = cityInput.value.toLowerCase().trim();
+            
+            // Сортируем города: сначала точные совпадения, потом частичные
+            const sortedCities = cities.map(city => {
+                const cityName = (city.city || city.name || '').toLowerCase();
+                let score = 0;
+                
+                // Специальная обработка для Москвы
+                if (city.code === 44 || cityName === 'москва') {
+                    // Если запрос похож на "москва" (мск, моск, москва и т.д.)
+                    if (query.includes('мск') || query.includes('моск') || query === 'москва' || query === 'moscow') {
+                        score = 50000; // Максимальный приоритет для Москвы
+                    }
+                }
+                
+                // Точное совпадение - наивысший приоритет
+                if (cityName === query) {
+                    score = Math.max(score, 10000);
+                }
+                // Начинается с запроса (без учета регистра)
+                else if (cityName.startsWith(query)) {
+                    score = Math.max(score, 5000);
+                }
+                // Содержит запрос в начале слова
+                else if (cityName.includes(' ' + query) || cityName.startsWith(query + ' ')) {
+                    score = Math.max(score, 2000);
+                }
+                // Содержит запрос
+                else if (cityName.includes(query)) {
+                    score = Math.max(score, 1000);
+                }
+                // Частичное совпадение (по словам)
+                else {
+                    const queryWords = query.split(/\s+/).filter(w => w.length > 0);
+                    const cityWords = cityName.split(/\s+/).filter(w => w.length > 0);
+                    const matchingWords = queryWords.filter(qw => 
+                        cityWords.some(cw => cw.startsWith(qw) || cw.includes(qw))
+                    );
+                    score = Math.max(score, matchingWords.length * 100);
+                }
+                
+                return { city, score };
+            })
+            .sort((a, b) => {
+                // Сначала по score, потом по длине названия (короче = лучше)
+                if (b.score !== a.score) {
+                    return b.score - a.score;
+                }
+                const aName = (a.city.city || a.city.name || '').length;
+                const bName = (b.city.city || b.city.name || '').length;
+                return aName - bName;
+            })
+            .map(item => item.city)
+            .slice(0, 15); // Берем первые 15, чтобы гарантированно показать Москву
+            
+            sortedCities.forEach((city, index) => {
+                const item = document.createElement('div');
+                const cityName = city.city || city.name || 'Неизвестный город';
+                const cityNameLower = cityName.toLowerCase();
+                
+                // Выделяем точные совпадения
+                if (cityNameLower === query || cityNameLower.startsWith(query)) {
+                    item.className = 'city-suggestion exact-match';
+                } else {
+                    item.className = 'city-suggestion';
+                }
+                
+                // Формируем текст с учетом структуры ответа API
+                const region = city.region || city.region_name || '';
+                const text = region ? `${cityName}, ${region}` : cityName;
+                item.textContent = text;
+                item.addEventListener('click', () => {
+                    selectCity(city);
+                });
+                citySuggestions.appendChild(item);
+            });
+            
+            citySuggestions.classList.add('show');
+        }
+
+        function selectCity(city) {
+            selectedCity = city;
+            // Используем правильное поле для названия города
+            const cityName = city.city || city.name || 'Неизвестный город';
+            cityInput.value = cityName;
+            // Используем правильное поле для кода города
+            const code = city.code || city.city_code || city.city_code || '';
+            cityCode.value = code;
+            citySuggestions.classList.remove('show');
+            
+            // Сохраняем полные данные города для использования в расчете
+            selectedCity.name = cityName;
+            selectedCity.code = code;
+            
+            console.log('Выбран город:', selectedCity);
+        }
+
+        // Закрытие списка при клике вне его
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.city-search')) {
+                citySuggestions.classList.remove('show');
+            }
+        });
+
+        // Выбор типа доставки
+        deliveryOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                deliveryOptions.forEach(opt => opt.classList.remove('active'));
+                this.classList.add('active');
+                selectedDeliveryType = this.dataset.type;
+                deliveryType.value = selectedDeliveryType;
+            });
+        });
+
+        // УБРАНО: Автоматический выбор при blur - пользователь должен сам выбрать город из списка
+        // Это предотвращает случайный выбор неправильного города
+
+        // Обработка нажатия Enter в поле города
+        cityInput.addEventListener('keydown', async function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                
+                // Если город уже выбран, запускаем расчет
+                if (selectedCity) {
+                    calculateBtn.click();
+                    return;
+                }
+                
+                // Если город не выбран, пытаемся найти точное совпадение
+                if (cityInput.value.trim()) {
+                    const query = cityInput.value.trim().toLowerCase();
+                    
+                    // Сначала проверяем сохраненные результаты
+                    if (lastSearchResults && lastSearchResults.length > 0) {
+                        // Ищем точное совпадение (без учета регистра)
+                        const exactMatch = lastSearchResults.find(city => {
+                            const cityName = (city.city || city.name || '').toLowerCase();
+                            return cityName === query;
+                        });
+                        
+                        if (exactMatch) {
+                            selectCity(exactMatch);
+                            calculateBtn.click();
+                            return;
+                        }
+                    }
+                    
+                    // Если нет в сохраненных, делаем новый запрос
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/cities?q=${encodeURIComponent(cityInput.value.trim())}&size=20`);
+                        const data = await response.json();
+                        
+                        if (data.success && data.data && data.data.length > 0) {
+                            // Ищем точное совпадение
+                            const exactMatch = data.data.find(city => {
+                                const cityName = (city.city || city.name || '').toLowerCase();
+                                return cityName === query;
+                            });
+                            
+                            if (exactMatch) {
+                                selectCity(exactMatch);
+                                calculateBtn.click();
+                            } else {
+                                // Если нет точного совпадения, показываем список
+                                displayCitySuggestions(data.data);
+                                showError('Выберите город из списка. Для автоматического выбора нужно точное совпадение названия.');
+                            }
+                        } else {
+                            showError('Город не найден. Попробуйте ввести другое название.');
+                        }
+                    } catch (err) {
+                        console.error('Ошибка при поиске города:', err);
+                        showError('Ошибка при поиске города. Проверьте подключение к серверу.');
+                    }
+                } else {
+                    showError('Введите название города');
+                }
+            }
+        });
+
+        // Обработка формы
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Проверяем, что город выбран
+            if (!selectedCity) {
+                showError('Пожалуйста, выберите город из списка. Кликните на город в выпадающем списке.');
+                return;
+            }
+
+            // Проверяем, что код города есть
+            const cityCodeValue = selectedCity.code || cityCode.value;
+            if (!cityCodeValue) {
+                console.error('Данные выбранного города:', selectedCity);
+                showError('Код города не найден. Попробуйте выбрать город заново из списка');
+                return;
+            }
+
+            // Проверяем, что код города - валидное число
+            const cityCodeNum = parseInt(cityCodeValue);
+            if (isNaN(cityCodeNum)) {
+                console.error('Неверный формат кода города:', cityCodeValue);
+                showError('Неверный формат кода города. Попробуйте выбрать город заново');
+                return;
+            }
+
+            // Проверяем тип доставки
+            if (!selectedDeliveryType) {
+                showError('Пожалуйста, выберите способ доставки');
+                return;
+            }
+
+            console.log('Начинаем расчет:', {
+                city: selectedCity,
+                deliveryType: selectedDeliveryType
+            });
+
+            await calculateDelivery();
+        });
+
+        async function calculateDelivery() {
+            // Показываем загрузку
+            loading.classList.add('show');
+            error.classList.remove('show');
+            results.classList.remove('show');
+            calculateBtn.disabled = true;
+
+            try {
+                // Проверяем, что город доставки не совпадает с городом отправления
+                const cityCodeValue = selectedCity.code || document.getElementById('cityCode').value;
+                if (!cityCodeValue) {
+                    throw new Error('Код города не найден');
+                }
+
+                const toCityCode = parseInt(cityCodeValue);
+                const fromCityCode = CONSTANTS.fromCityCode;
+
+                if (toCityCode === fromCityCode) {
+                    showError('Город доставки совпадает с городом отправления. Выберите другой город для доставки.');
+                    return;
+                }
+
+                // Определяем тарифы в зависимости от типа доставки
+                // Используем тарифы для сборного груза (50 кг)
+                const tariffs = selectedDeliveryType === 'office' 
+                    ? [751]  // Сборный груз склад-склад (для доставки до ПВЗ)
+                    : [750]; // Сборный груз склад-дверь (для доставки до двери)
+
+                // Пробуем рассчитать для каждого тарифа
+                const tariffResults = [];
+                
+                for (const tariffCode of tariffs) {
+                    try {
+                        const result = await calculateByTariff(tariffCode);
+                        
+                        // Проверяем наличие стоимости (может быть deliveryCost или delivery_sum)
+                        const cost = result.deliveryCost || result.delivery_sum;
+                        
+                        if (cost !== undefined && cost !== null) {
+                            tariffResults.push({
+                                code: tariffCode,
+                                name: getTariffName(tariffCode),
+                                cost: cost,
+                                totalCost: result.totalCost || result.total_sum || cost,
+                                periodMin: result.periodMin || result.period_min || 0,
+                                periodMax: result.periodMax || result.period_max || 0
+                            });
+                        } else {
+                            console.warn(`Тариф ${tariffCode} вернул неполные данные:`, result);
+                        }
+                    } catch (err) {
+                        console.warn(`Тариф ${tariffCode} недоступен:`, err.message);
+                        console.warn('Полная ошибка:', err);
+                        // Не прерываем цикл, пробуем другие тарифы
+                    }
+                }
+
+                if (tariffResults.length > 0) {
+                    displayResults(tariffResults);
+                } else {
+                    const cityName = selectedCity.city || selectedCity.name || cityInput.value;
+                    const fromCityName = 'Москва';
+                    
+                    // Проверяем, не совпадают ли города
+                    if (toCityCode === fromCityCode) {
+                        showError(`Город доставки "${cityName}" совпадает с городом отправления "${fromCityName}". Выберите другой город для доставки.`);
+                    } else {
+                        showError(`Не удалось рассчитать стоимость доставки для маршрута ${fromCityName} → ${cityName}. Возможно, для этого маршрута нет доступных тарифов. Попробуйте другой город.`);
+                    }
+                }
+
+            } catch (err) {
+                console.error('Ошибка расчета:', err);
+                let errorMessage = 'Ошибка при расчете стоимости доставки';
+                
+                if (err.message) {
+                    errorMessage += ': ' + err.message;
+                } else if (err.toString) {
+                    errorMessage += ': ' + err.toString();
+                }
+                
+                // Проверяем, может быть проблема с подключением к серверу
+                if (err.message && err.message.includes('Failed to fetch')) {
+                    errorMessage = 'Не удалось подключиться к серверу. Убедитесь, что сервер запущен на http://localhost:3000';
+                }
+                
+                showError(errorMessage);
+            } finally {
+                loading.classList.remove('show');
+                calculateBtn.disabled = false;
+            }
+        }
+
+        async function calculateByTariff(tariffCode) {
+            // Получаем код города - может быть числом или строкой
+            const cityCodeValue = selectedCity.code || document.getElementById('cityCode').value;
+            if (!cityCodeValue) {
+                throw new Error('Код города не найден');
+            }
+
+            const toCityCode = parseInt(cityCodeValue);
+            const fromCityCode = CONSTANTS.fromCityCode;
+
+            // Проверяем, что города не совпадают
+            if (toCityCode === fromCityCode) {
+                throw new Error('Город доставки совпадает с городом отправления. Выберите другой город.');
+            }
+
+            const body = {
+                tariffCode: tariffCode,
+                fromCityCode: fromCityCode,
+                fromAddress: CONSTANTS.fromAddress,
+                toCityCode: toCityCode,
+                weight: CONSTANTS.weight,
+                length: CONSTANTS.length,
+                width: CONSTANTS.width,
+                height: CONSTANTS.height
+            };
+
+            // Для тарифа 750 (до двери) добавляем адрес
+            // Для тарифа 751 (до ПВЗ) адрес не нужен - это доставка до склада/ПВЗ
+            if (selectedDeliveryType === 'door' && tariffCode === 750) {
+                const cityName = selectedCity.city || selectedCity.name || cityInput.value;
+                if (cityName) {
+                    body.toAddress = cityName;
+                }
+            }
+
+            console.log('Запрос расчета:', body);
+            console.log('Маршрут:', `${CONSTANTS.fromAddress} (${fromCityCode}) → ${selectedCity.city || selectedCity.name} (${toCityCode})`);
+
+            const response = await fetch(`${API_BASE_URL}/calculate-by-tariff`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            // Проверяем, что ответ валидный JSON
+            let data;
+            try {
+                data = await response.json();
+            } catch (err) {
+                const text = await response.text();
+                console.error('Ошибка парсинга JSON:', text);
+                throw new Error(`Ошибка сервера: ${response.status} ${response.statusText}`);
+            }
+            
+            console.log('Ответ API:', data);
+            
+            if (!response.ok) {
+                // Извлекаем детальное сообщение об ошибке
+                let errorMsg = data.message || data.error || `HTTP ${response.status}`;
+                
+                // Если есть детали ошибки, добавляем их
+                if (data.details && Array.isArray(data.details)) {
+                    errorMsg += ': ' + data.details.join(', ');
+                }
+                
+                // Если есть вложенные ошибки от CDEK API
+                if (data.message && data.message.includes('CDEK API Error')) {
+                    try {
+                        const match = data.message.match(/\{.*\}/);
+                        if (match) {
+                            const cdekError = JSON.parse(match[0]);
+                            if (cdekError.errors && Array.isArray(cdekError.errors)) {
+                                const cdekErrorMessages = cdekError.errors.map(e => e.message || e.code).join('; ');
+                                if (cdekErrorMessages) {
+                                    errorMsg = cdekErrorMessages;
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        // Игнорируем ошибки парсинга
+                    }
+                }
+                
+                console.error('Ошибка HTTP:', response.status, errorMsg, data);
+                throw new Error(errorMsg);
+            }
+            
+            // Проверяем наличие поля success (может отсутствовать при успехе)
+            if (data.success === false) {
+                const errorMsg = data.message || data.error || 'Ошибка расчета';
+                console.error('Ошибка расчета:', errorMsg, data);
+                throw new Error(errorMsg);
+            }
+
+            // Проверяем, что есть данные о стоимости
+            if (data.deliveryCost === undefined && data.delivery_sum === undefined) {
+                console.error('Нет данных о стоимости в ответе:', data);
+                throw new Error('Не удалось получить стоимость доставки');
+            }
+
+            return data;
+        }
+
+        function getTariffName(code) {
+            const names = {
+                751: 'Сборный груз склад-склад',
+                750: 'Сборный груз склад-дверь',
+                136: 'Посылка склад-склад',
+                137: 'Посылка склад-дверь',
+                138: 'Посылка дверь-склад',
+                139: 'Посылка дверь-дверь',
+                233: 'Магистральный экспресс склад-дверь',
+                234: 'Магистральный экспресс склад-склад',
+            };
+            return names[code] || `Тариф ${code}`;
+        }
+
+        function displayResults(tariffResults) {
+            resultsContent.innerHTML = '';
+
+            // Сортируем по стоимости
+            tariffResults.sort((a, b) => a.cost - b.cost);
+
+            tariffResults.forEach(tariff => {
+                const item = document.createElement('div');
+                item.className = 'result-item';
+                item.innerHTML = `
+                    <div class="tariff-name">${tariff.name}</div>
+                    <div class="tariff-cost">${tariff.cost.toLocaleString('ru-RU')} ₽</div>
+                    <div class="tariff-period">Срок доставки: ${tariff.periodMin}-${tariff.periodMax} дн.</div>
+                `;
+                resultsContent.appendChild(item);
+            });
+
+            results.classList.add('show');
+        }
+
+        function showError(message) {
+            error.textContent = message;
+            error.classList.add('show');
+        }
+
+        // Инициализация: выбираем первый тип доставки по умолчанию
+        if (deliveryOptions.length > 0) {
+            deliveryOptions[0].click();
+        }
+    </script>
+</body>
+</html>
+
